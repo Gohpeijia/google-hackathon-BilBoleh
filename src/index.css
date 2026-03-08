@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-[40px] bg-white/40 border border-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.05)] ring-1 ring-white/20;
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.5), 0 10px 30px rgba(0, 0, 0, 0.05);
+  }
+  
+  .glass-dark {
+    @apply backdrop-blur-[40px] bg-slate-900/20 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.2)] ring-1 ring-white/5;
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05), 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .squircle {
+    border-radius: 3rem;
+  }
+
+  .neumorph-pill {
+    @apply bg-white/60 backdrop-blur-md border border-white/80 shadow-[4px_4px_10px_rgba(0,0,0,0.05),-4px_-4px_10px_rgba(255,255,255,0.8)] rounded-full;
+  }
+
+  .neumorph-pill-dark {
+    @apply bg-slate-800/40 backdrop-blur-md border border-white/5 shadow-[4px_4px_10px_rgba(0,0,0,0.3),-4px_-4px_10px_rgba(255,255,255,0.05)] rounded-full;
+  }
+
+  .glow-pink {
+    @apply shadow-[0_0_20px_rgba(236,72,153,0.4)];
+  }
+
+  .glow-blue {
+    @apply shadow-[0_0_20px_rgba(59,130,246,0.4)];
+  }
+}
+
+body {
+  @apply antialiased min-h-screen overflow-hidden transition-colors duration-500;
+}
+
+body.light {
+  @apply bg-[#f0f2f5] text-slate-900;
+  background: radial-gradient(circle at 0% 0%, #ffdee9 0%, #b5fffc 100%),
+              linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+body.dark {
+  @apply bg-[#0f172a] text-slate-100;
+  background: radial-gradient(circle at 100% 100%, #2e1065 0%, #0f172a 100%),
+              linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-400/20 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400/40;
+}
