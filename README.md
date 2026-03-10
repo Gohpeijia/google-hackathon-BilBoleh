@@ -7,6 +7,37 @@
 
 **Bilboleh** is an AI-powered, end-to-end e-Invoicing platform designed to help Malaysian MSMEs seamlessly transition to the **LHDN MyInvois System**. By leveraging Multimodal AI, it transforms messy, handwritten, or faded receipts into compliant, structured LHDN JSON payloads in seconds.
 
+## 🖼️ User Interface Showcase
+
+<table border="0">
+  <tr>
+    <td align="center" width="40%">
+      <b>🔐 The Login Page</b><br />
+      <img src="https://github.com/user-attachments/assets/13dc7c57-90d7-41d3-82ed-6734e31c70b9" width="100%" />
+    </td>
+    <td align="center" width="40%">
+      <b>📊 Dashboard Page</b><br />
+      <img src="https://github.com/user-attachments/assets/d296fc9d-4d7e-47ab-a5cd-7655a278bad6" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="40%">
+      <b>🌗 Different Colour Mode</b><br />
+      <img src="https://github.com/user-attachments/assets/47046405-bd7c-4c15-990b-7c587f153811" width="100%" />
+    </td>
+    <td align="center" width="40%">
+      <b>📝 MyInvois Status Page</b><br />
+      <img alt="{BF21645E-8235-4753-8414-69DCFCCB64F5}" src="https://github.com/user-attachments/assets/d33d7606-a5b6-4a70-b8de-d0f35a34b70d" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <b>⚡ Bilboleh Process</b><br />
+      <img src="https://github.com/user-attachments/assets/e9f35bed-32f6-4341-b25d-f85921bcd18a" width=100%" />
+    </td>
+  </tr>
+</table>
+
 ## ✨ Key Features
 
 * **🤖 Smart Multimodal Extraction**: Powered by Google Gemini 2.5 Flash to accurately read and extract financial data from raw images and PDFs.
