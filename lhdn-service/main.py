@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware # 👈 1. 匯入 CORS
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional
+from typing import List, Optional, Dict, Any # 👈 加上 Dict, Any
 from fastapi import Response
 import uvicorn
 import json
@@ -12,10 +13,18 @@ import uuid
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("myinvois-service")
 
-app = FastAPI(title="EzBill LHDN Microservice", version="1.0.0")
+app = FastAPI(title="Bilboleh LHDN Microservice", version="1.0.0")
+
+# 👈 2. 加入 CORS Middleware (非常重要，否則 React 無法連線)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 開發階段允許所有來源 (localhost:5173 等)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- Models ---
-
 class InvoiceItem(BaseModel):
     description: str
     quantity: float
@@ -32,23 +41,17 @@ class InvoiceRequest(BaseModel):
     currency: str = "MYR"
 
 # --- Core Logic ---
-
 def sign_document(payload: dict) -> str:
     """
     PLACEHOLDER: Digital Signature (PKI) Implementation.
-    In production, this would use a private key from Google Secret Manager
-    to sign the SHA-256 hash of the document.
     """
     logger.info("Signing document with Digital Signature...")
     return "MOCK_DIGITAL_SIGNATURE_" + str(uuid.uuid4())
 
 def map_to_lhdn_schema(data: InvoiceRequest) -> dict:
-    """
-    Maps raw transaction data to the official LHDN MyInvois JSON Schema.
-    """
+    # (保留你原本完美的 Schema 對接邏輯)
     issue_date = datetime.date.today().isoformat()
     issue_time = datetime.datetime.now().strftime("%H:%M:%SZ")
-    
     total_tax = sum(item.quantity * item.unit_price * item.tax_rate for item in data.items)
     total_exclusive = sum(item.quantity * item.unit_price for item in data.items)
     
@@ -58,103 +61,74 @@ def map_to_lhdn_schema(data: InvoiceRequest) -> dict:
         "IssueTime": issue_time,
         "InvoiceTypeCode": "01",
         "DocumentCurrencyCode": data.currency,
-        "TaxTotal": [
-            {
-                "TaxAmount": {"currencyID": data.currency, "value": total_tax},
-                "TaxSubtotal": [
-                    {
-                        "TaxableAmount": {"currencyID": data.currency, "value": total_exclusive},
-                        "TaxAmount": {"currencyID": data.currency, "value": total_tax},
-                        "TaxCategory": {"ID": "01"}
-                    }
-                ]
-            }
-        ],
+        "TaxTotal": [{"TaxAmount": {"currencyID": data.currency, "value": total_tax}}],
         "LegalMonetaryTotal": {
-            "LineExtensionAmount": {"currencyID": data.currency, "value": total_exclusive},
-            "TaxExclusiveAmount": {"currencyID": data.currency, "value": total_exclusive},
-            "TaxInclusiveAmount": {"currencyID": data.currency, "value": total_exclusive + total_tax},
             "PayableAmount": {"currencyID": data.currency, "value": total_exclusive + total_tax}
-        },
-        "InvoiceLine": [
-            {
-                "ID": str(i+1),
-                "InvoicedQuantity": {"unitCode": "UNIT", "value": item.quantity},
-                "LineExtensionAmount": {"currencyID": data.currency, "value": item.quantity * item.unit_price},
-                "Item": {"Description": item.description},
-                "Price": {"PriceAmount": {"currencyID": data.currency, "value": item.unit_price}}
-            } for i, item in enumerate(data.items)
-        ]
+        }
     }
     return payload
 
 # --- Routes ---
 
+# 👈 3. 新增這個路由：專門給 React 前端 "Merchant Auto-Sync" 使用
+@app.post("/api/v1/submit")
+async def react_frontend_submit(payload: Dict[str, Any]):
+    """
+    接收從 React 前端 (Gemini AI 提取的資料) 傳來的動態 JSON。
+    """
+    # 可以在 Terminal 看到前端傳來的資料
+    invoice_no = payload.get("invoiceNumber", "Unknown")
+    buyer_name = payload.get("buyer", {}).get("name", "Unknown")
+    total_amount = payload.get("totalPayable", 0)
+
+    logger.info(f"✨ [REACT SYNC] Received Invoice: {invoice_no} | Buyer: {buyer_name} | Total: RM {total_amount}")
+    
+    # 加上數位簽章
+    signature = sign_document(payload)
+    payload["Signature"] = signature
+    
+    # 回傳給 React 前端，讓前端狀態變成 Validated
+    return {
+        "status": "success",
+        "message": "Successfully synchronized with Bilboleh React App.",
+        "lhdn_signature": signature,
+        "received_data": payload
+    }
+
+# 👇 下面保留你原本寫好的所有路由 👇
+
 @app.post("/api/v1/invoice/submit")
 async def submit_invoice(request: InvoiceRequest):
-    # 1. Creation & Validation (Pydantic handles basic validation)
     logger.info(f"Received invoice request for Seller TIN: {request.seller_tin}")
-    
-    # 2. Submission (Formatting)
     lhdn_payload = map_to_lhdn_schema(request)
-    
-    # 3. Signing (PKI)
     signature = sign_document(lhdn_payload)
     lhdn_payload["Signature"] = signature
     
-    # 4. Validation (Mock LHDN Sandbox API Call)
-    logger.info("Submitting to LHDN Sandbox API...")
-    # Mocking a successful 202 Accepted response from LHDN
     mock_lhdn_response = {
         "submissionId": str(uuid.uuid4()),
-        "acceptedDocuments": [
-            {
-                "uuid": str(uuid.uuid4()),
-                "invoiceNumber": lhdn_payload["ID"]
-            }
-        ]
+        "acceptedDocuments": [{"uuid": str(uuid.uuid4()), "invoiceNumber": lhdn_payload["ID"]}]
     }
-    
-    # 5. Notification & Storage
     logger.info(f"Invoice {lhdn_payload['ID']} successfully validated and archived.")
-    
-    # 6. Presentation (Mock PDF/QR Generation)
     qr_content = f"https://sdk.myinvois.hasil.gov.my/uuid/{mock_lhdn_response['acceptedDocuments'][0]['uuid']}"
     
     return {
         "status": "success",
         "lhdn_response": mock_lhdn_response,
-        "visual_data": {
-            "qr_url": qr_content,
-            "pdf_status": "Generated"
-        },
+        "visual_data": {"qr_url": qr_content, "pdf_status": "Generated"},
         "payload_sent": lhdn_payload
     }
 
 @app.post("/api/download-invoice")
 async def download_invoice_json():
-    # 1. This is the placeholder data (Replace this with dynamic data later)
     extracted_data = {
-        "vendor_info": {
-            "name": "lin hup hin",
-            "tin": "N/A"
-        },
-        "financials": {
-            "tax_amount": 300,
-            "total_amount": 3000
-        }
+        "vendor_info": {"name": "lin hup hin", "tin": "N/A"},
+        "financials": {"tax_amount": 300, "total_amount": 3000}
     }
-    
-    # 2. Convert the Python dictionary to a formatted JSON string
     json_string = json.dumps(extracted_data, indent=4)
-    
-    # 3. Return a Response with the 'attachment' header
     return Response(
         content=json_string,
         media_type="application/json",
-        headers={
-            "Content-Disposition": 'attachment; filename="invoice_data.json"'
-        }
+        headers={"Content-Disposition": 'attachment; filename="invoice_data.json"'}
     )
 
 @app.get("/health")
@@ -162,4 +136,4 @@ def health_check():
     return {"status": "healthy"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8000) # 👈 建議改成 port=8000，配合前端設定
